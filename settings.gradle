@@ -1,2 +1,3 @@
-include ':app', ':Service', ':service'
-rootProject.name='topeer'
+rootProject.name = 'topeer'
+
+include ':app', ':service'

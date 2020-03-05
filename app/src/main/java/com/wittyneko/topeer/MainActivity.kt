@@ -1,63 +1,42 @@
 package com.wittyneko.topeer
 
-import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import androidx.annotation.RequiresApi
+import androidx.navigation.findNavController
+import androidx.navigation.fragment.NavHostFragment
+import com.wittyneko.template.ui.MainViewModule
+import com.wittyneko.template.ui.mainKodeinModule
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import org.kodein.di.Copy
+import org.kodein.di.Kodein
+import org.kodein.di.KodeinAware
+import org.kodein.di.android.closestKodein
+import org.kodein.di.android.retainedKodein
+import org.kodein.di.generic.instance
+import org.kodein.di.generic.kcontext
 import java.net.*
 
-class MainActivity : AppCompatActivity() {
+
+class MainActivity : AppCompatActivity(), KodeinAware {
+
+    val navHostFragment by lazy { findNavController(R.id.nav_host_fragment) }
+
+    protected val parentKodein by closestKodein()
+
+    override val kodeinContext = kcontext(this)
+
+    override val kodein: Kodein by retainedKodein {
+        extend(parentKodein, copy = Copy.All)
+        import(mainKodeinModule)
+    }
+    val viewModule: MainViewModule by instance()
+
+    override fun onSupportNavigateUp(): Boolean = navHostFragment.navigateUp()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        GlobalScope.launch(Dispatchers.IO) {
-            MainService().start()
-        }
     }
-}
-
-class MainService {
-
-    val socket by lazy { DatagramSocket(2233) }
-
-    var onReceive: ((DatagramPacket) -> Unit)? = null
-
-    @RequiresApi(Build.VERSION_CODES.KITKAT)
-    fun start() {
-
-        try {
-
-            println("inetAddress: ${socket.inetAddress}")
-            println("localAddress: ${socket.localAddress}")
-            println("localSocketAddress: ${socket.localSocketAddress}")
-            println("remoteSocketAddress: ${socket.remoteSocketAddress}")
-            println("reuseAddress: ${socket.reuseAddress}")
-
-            //链接中转站
-            //val address = InetSocketAddress("service.tutoo.xyz", 2233)
-            val address = InetSocketAddress("192.168.10.233", 2233)
-            val data = "client message".toByteArray()
-            val sendPacket = DatagramPacket(data, data.size, address)
-            socket.send(sendPacket)
-            println("send end")
-            val receiveData = ByteArray(1024)
-            val receivePaket = DatagramPacket(receiveData, receiveData.size)
-            //接收节点
-            socket.receive(receivePaket)
-            println("receive ${receivePaket.address}:${receivePaket.port}")
-            println(String(receiveData.sliceArray(0 until receivePaket.length)))
-
-            //socket.receive(receivePaket)
-        } catch (e: Throwable) {
-            e.printStackTrace()
-        } finally {
-            println("close ${socket.localPort}")
-            socket.close()
-        }
-    }
-
 }
